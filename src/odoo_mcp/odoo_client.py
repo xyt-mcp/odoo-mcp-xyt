@@ -235,7 +235,7 @@ class OdooClient:
             return {"error": str(e)}
 
     def search_read(
-        self, model_name, domain, fields=None, offset=0, limit=None, order=None
+        self, model_name, domain, fields=None, offset=None, limit=None, order=None
     ):
         """
         Search for records and read their data in a single call
@@ -258,7 +258,9 @@ class OdooClient:
             5
         """
         try:
-            kwargs = {"offset": offset}
+            kwargs = {}
+            if offset:
+                kwargs["offset"] = offset
             if fields is not None:
                 kwargs["fields"] = fields
             if limit is not None:

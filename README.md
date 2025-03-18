@@ -74,6 +74,14 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
     * `limit` (optional number): The maximum number of results to return (default 20).
   * Returns: List of matching employee names and IDs.
 
+* **search_holidays**
+  * Searches for holidays within a specified date range.
+  * Inputs:
+    * `start_date` (string): Start date in YYYY-MM-DD format.
+    * `end_date` (string): End date in YYYY-MM-DD format.
+    * `employee_id` (optional number): Optional employee ID to filter holidays.
+  * Returns: List of holidays found.
+
 ## Resources
 
 * **odoo://models**
