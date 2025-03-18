@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "odoo-mcp"
-version = "0.0.1"
+version = "0.0.3"
 description = "MCP Server for Odoo Integration"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -17,6 +18,11 @@ classifiers = [
 keywords = ["odoo", "mcp", "server"]
 authors = [
     {name = "Lê Anh Tuấn", email = "justin.le.1105@gmail.com"}
+]
+dependencies = [
+    "mcp>=0.1.1",
+    "requests>=2.31.0",
+    "xmlrpc>=0.4.1",
 ]
 
 [project.urls]
