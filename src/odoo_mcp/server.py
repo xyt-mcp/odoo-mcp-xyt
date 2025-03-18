@@ -167,6 +167,23 @@ class SearchDomain(BaseModel):
         return [condition.to_tuple() for condition in self.conditions]
 
 
+class EmployeeSearchResult(BaseModel):
+    """Represents a single employee search result."""
+
+    id: int = Field(description="Employee ID")
+    name: str = Field(description="Employee name")
+
+
+class SearchEmployeeResponse(BaseModel):
+    """Response model for the search_employee tool."""
+
+    success: bool = Field(description="Indicates if the search was successful")
+    result: Optional[List[EmployeeSearchResult]] = Field(
+        default=None, description="List of employee search results"
+    )
+    error: Optional[str] = Field(default=None, description="Error message, if any")
+
+
 # ----- MCP Tools -----
 
 
@@ -262,8 +279,7 @@ def execute_method(
                                     k in cond for k in ["field", "operator", "value"]
                                 ):
                                     domain_list.append(
-                                        [cond["field"], cond["operator"],
-                                            cond["value"]]
+                                        [cond["field"], cond["operator"], cond["value"]]
                                     )
                         elif isinstance(parsed_domain, list):
                             domain_list = parsed_domain
@@ -300,10 +316,42 @@ def execute_method(
                 args = normalized_args
 
                 # Log for debugging
-                print(f"Executing {method} with normalized domain: {
-                      domain_list}")
+                print(f"Executing {method} with normalized domain: {domain_list}")
 
         result = odoo.execute_method(model, method, *args, **kwargs)
         return {"success": True, "result": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@mcp.tool(description="Search for employees by name")
+def search_employee(
+    ctx: Context,
+    name: str,
+    limit: int = 20,
+) -> SearchEmployeeResponse:
+    """
+    Search for employees by name using Odoo's name_search method.
+
+    Parameters:
+        name: The name (or part of the name) to search for.
+        limit: The maximum number of results to return (default 20).
+
+    Returns:
+        SearchEmployeeResponse containing results or error information.
+    """
+    odoo = ctx.request_context.lifespan_context.odoo
+    model = "hr.employee"
+    method = "name_search"
+
+    args = []
+    kwargs = {"name": name, "limit": limit}
+
+    try:
+        result = odoo.execute_method(model, method, *args, **kwargs)
+        parsed_result = [
+            EmployeeSearchResult(id=item[0], name=item[1]) for item in result
+        ]
+        return SearchEmployeeResponse(success=True, result=parsed_result)
+    except Exception as e:
+        return SearchEmployeeResponse(success=False, error=str(e))

@@ -67,6 +67,13 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
     * `model` (string): The model name (e.g., 'res.partner')
   * Returns: Dictionary with field definitions
 
+* **search_employee**
+  * Search for employees by name.
+  * Inputs:
+    * `name` (string): The name (or part of the name) to search for.
+    * `limit` (optional number): The maximum number of results to return (default 20).
+  * Returns: List of matching employee names and IDs.
+
 ## Resources
 
 * **odoo://models**
