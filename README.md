@@ -125,6 +125,7 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
    * `ODOO_PASSWORD`: Password or API key
    * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
    * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
+   * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
 
 ### Usage with Claude Desktop
 

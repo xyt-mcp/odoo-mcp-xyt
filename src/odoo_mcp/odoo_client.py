@@ -8,6 +8,7 @@ import re
 import socket
 import urllib.parse
 
+import http.client
 import xmlrpc.client
 
 
@@ -307,12 +308,15 @@ class OdooClient:
 class RedirectTransport(xmlrpc.client.Transport):
     """Transport that adds timeout, SSL verification, and redirect handling"""
 
-    def __init__(self, timeout=10, use_https=True, verify_ssl=True, max_redirects=5):
+    def __init__(
+        self, timeout=10, use_https=True, verify_ssl=True, max_redirects=5, proxy=None
+    ):
         super().__init__()
         self.timeout = timeout
         self.use_https = use_https
         self.verify_ssl = verify_ssl
         self.max_redirects = max_redirects
+        self.proxy = proxy or os.environ.get("HTTP_PROXY")
 
         if use_https and not verify_ssl:
             import ssl
@@ -320,19 +324,26 @@ class RedirectTransport(xmlrpc.client.Transport):
             self.context = ssl._create_unverified_context()
 
     def make_connection(self, host):
-        if self.use_https and not self.verify_ssl:
-            import http.client
-
-            return http.client.HTTPSConnection(
-                host, timeout=self.timeout, context=self.context
+        if self.proxy:
+            proxy_url = urllib.parse.urlparse(self.proxy)
+            connection = http.client.HTTPConnection(
+                proxy_url.hostname, proxy_url.port, timeout=self.timeout
             )
+            connection.set_tunnel(host)
         else:
-            import http.client
-
-            if self.use_https:
-                return http.client.HTTPSConnection(host, timeout=self.timeout)
+            if self.use_https and not self.verify_ssl:
+                connection = http.client.HTTPSConnection(
+                    host, timeout=self.timeout, context=self.context
+                )
             else:
-                return http.client.HTTPConnection(host, timeout=self.timeout)
+                if self.use_https:
+                    connection = http.client.HTTPSConnection(
+                        host, timeout=self.timeout)
+                else:
+                    connection = http.client.HTTPConnection(
+                        host, timeout=self.timeout)
+
+        return connection
 
     def request(self, host, handler, request_body, verbose):
         """Send HTTP request with retry for redirects"""
