@@ -20,8 +20,8 @@ authors = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tuanle03/mcp-odoo"
-Issues = "https://github.com/tuanle03/mcp-odoo/issues"
+Homepage = "https://github.com/tuanle96/mcp-odoo"
+Issues = "https://github.com/tuanle96/mcp-odoo/issues"
 
 [project.optional-dependencies]
 dev = [
