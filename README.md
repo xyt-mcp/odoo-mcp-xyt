@@ -67,6 +67,21 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
     * `model` (string): The model name (e.g., 'res.partner')
   * Returns: Dictionary with field definitions
 
+* **search_employee**
+  * Search for employees by name.
+  * Inputs:
+    * `name` (string): The name (or part of the name) to search for.
+    * `limit` (optional number): The maximum number of results to return (default 20).
+  * Returns: List of matching employee names and IDs.
+
+* **search_holidays**
+  * Searches for holidays within a specified date range.
+  * Inputs:
+    * `start_date` (string): Start date in YYYY-MM-DD format.
+    * `end_date` (string): End date in YYYY-MM-DD format.
+    * `employee_id` (optional number): Optional employee ID to filter holidays.
+  * Returns: List of holidays found.
+
 ## Resources
 
 * **odoo://models**
@@ -110,6 +125,7 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
    * `ODOO_PASSWORD`: Password or API key
    * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
    * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
+   * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
 
 ### Usage with Claude Desktop
 
