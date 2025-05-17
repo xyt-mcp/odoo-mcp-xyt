@@ -14,7 +14,7 @@ def main() -> int:
     Run the MCP server
     """
     try:
-        print("=== ODOO MCP SERVER STARTING ===", file=sys.stderr)
+        print("=== ODOO MCP SERVER STARTING XYT ===", file=sys.stderr)
         print(f"Python version: {sys.version}", file=sys.stderr)
         print("Environment variables:", file=sys.stderr)
         for key, value in os.environ.items():

@@ -1,3 +1,24 @@
+# UVX方式安装odoo mcp服务
+
+```
+{
+    "mcpServers": {
+        "odoo-mcp-xyt": {
+            "command": "uvx",
+            "args": [
+                "odoo-mcp-xyt==0.1.0"
+            ],
+            "env": {
+                "ODOO_URL": "",
+                "ODOO_DB": "",
+                "ODOO_USERNAME": "",
+                "ODOO_PASSWORD": ""
+            }
+        }
+    }
+}
+```
+
 # Odoo MCP Server
 
 An MCP server implementation that integrates with Odoo ERP systems, enabling AI assistants to interact with Odoo data and functionality through the Model Context Protocol.

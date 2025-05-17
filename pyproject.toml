@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "odoo-mcp"
-version = "0.0.3"
+name = "odoo-mcp-xyt"
+version = "0.1.1"
 description = "MCP Server for Odoo Integration"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-odoo-mcp = "odoo_mcp.__main__:main"
+odoo-mcp-xyt = "odoo_mcp.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
