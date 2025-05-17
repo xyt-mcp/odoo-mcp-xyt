@@ -6,7 +6,7 @@
         "odoo-mcp-xyt": {
             "command": "uvx",
             "args": [
-                "odoo-mcp-xyt==0.1.0"
+                "odoo-mcp-xyt==0.1.2"
             ],
             "env": {
                 "ODOO_URL": "",
@@ -35,6 +35,7 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
 ## Tools
 
 * **execute_method**
+
   * Execute a custom method on an Odoo model
   * Inputs:
     * `model` (string): The model name (e.g., 'res.partner')
@@ -42,15 +43,15 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
     * `args` (optional array): Positional arguments
     * `kwargs` (optional object): Keyword arguments
   * Returns: Dictionary with the method result and success indicator
-
 * **search_employee**
+
   * Search for employees by name
   * Inputs:
     * `name` (string): The name (or part of the name) to search for
     * `limit` (optional number): The maximum number of results to return (default 20)
   * Returns: Object containing success indicator, list of matching employee names and IDs, and any error message
-
 * **search_holidays**
+
   * Searches for holidays within a specified date range
   * Inputs:
     * `start_date` (string): Start date in YYYY-MM-DD format
@@ -61,20 +62,21 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
 ## Resources
 
 * **odoo://models**
+
   * Lists all available models in the Odoo system
   * Returns: JSON array of model information
-
 * **odoo://model/{model_name}**
+
   * Get information about a specific model including fields
   * Example: `odoo://model/res.partner`
   * Returns: JSON object with model metadata and field definitions
-
 * **odoo://record/{model_name}/{record_id}**
+
   * Get a specific record by ID
   * Example: `odoo://record/res.partner/1`
   * Returns: JSON object with record data
-
 * **odoo://search/{model_name}/{domain}**
+
   * Search for records that match a domain
   * Example: `odoo://search/res.partner/[["is_company","=",true]]`
   * Returns: JSON array of matching records (limited to 10 by default)
@@ -196,6 +198,7 @@ docker build -t mcp/odoo:latest -f Dockerfile .
 When using the MCP tools for Odoo, pay attention to these parameter formatting guidelines:
 
 1. **Domain Parameter**:
+
    * The following domain formats are supported:
      * List format: `[["field", "operator", value], ...]`
      * Object format: `{"conditions": [{"field": "...", "operator": "...", "value": "..."}]}`
@@ -204,8 +207,8 @@ When using the MCP tools for Odoo, pay attention to these parameter formatting g
      * List format: `[["is_company", "=", true]]`
      * Object format: `{"conditions": [{"field": "date_order", "operator": ">=", "value": "2025-03-01"}]}`
      * Multiple conditions: `[["date_order", ">=", "2025-03-01"], ["date_order", "<=", "2025-03-31"]]`
-
 2. **Fields Parameter**:
+
    * Should be an array of field names: `["name", "email", "phone"]`
    * The server will try to parse string inputs as JSON
 
