@@ -348,10 +348,10 @@ def execute_method(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Search for employees by name")
+@mcp.tool(name="查询员工", description="Search for employees by name")
 def search_employee(
     ctx: Context,
-    name: str,
+    name: str = Field(description="The name (or part of the name) to search for."),
     limit: int = 20,
 ) -> SearchEmployeeResponse:
     """
