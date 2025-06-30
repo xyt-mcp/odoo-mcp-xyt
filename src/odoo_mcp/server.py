@@ -175,6 +175,12 @@ class EmployeeSearchResult(BaseModel):
     name: str = Field(description="Employee name")
 
 
+class CalendarSearchResult(BaseModel):
+    """Represents a single calendar search result."""
+
+    id: int = Field(description="Calendar ID")
+    name: str = Field(description="Calendar name")
+
 class SearchEmployeeResponse(BaseModel):
     """Response model for the search_employee tool."""
 
@@ -184,6 +190,15 @@ class SearchEmployeeResponse(BaseModel):
     )
     error: Optional[str] = Field(default=None, description="Error message, if any")
 
+
+class SearchCalendarResponse(BaseModel):
+    """Response model for the search_calendar_by_date tool."""
+
+    success: bool = Field(description="Indicates if the search was successful")
+    result: Optional[List[CalendarSearchResult]] = Field(
+        default=None, description="List of calendar search results"
+    )
+    error: Optional[str] = Field(default=None, description="Error message, if any")
 
 class Holiday(BaseModel):
     """Represents a single holiday."""
@@ -380,6 +395,37 @@ def search_employee(
     except Exception as e:
         return SearchEmployeeResponse(success=False, error=str(e))
 
+@mcp.tool(name="查询日历", description="根据日期查询员工日历")
+def search_calendar_by_date(
+    ctx: Context,
+    start_date: str = Field(description="开始日期，格式为 YYYY-MM-DD"),
+    limit: int = 10,
+) -> SearchCalendarResponse:
+    """
+    Search for calendar by date using Odoo's search_read method.
+
+    Parameters:
+        date: 开始日期，格式为 YYYY-MM-DD
+        limit: The maximum number of results to return (default 10).
+
+    Returns:
+        SearchCalendarResponse containing results or error information.
+    """
+    odoo = ctx.request_context.lifespan_context.odoo
+    model = "calendar.event"
+    method = "search_read"
+
+    args = [[["start_date", "=", start_date],]]
+    kwargs = {'fields': ['display_name', 'start_date'], 'limit': limit}
+
+    try:
+        result = odoo.execute_method(model, method, *args, **kwargs)
+        parsed_result = [
+            CalendarSearchResult(id=item[0], name=item[1]) for item in result
+        ]
+        return SearchCalendarResponse(success=True, result=parsed_result)
+    except Exception as e:
+        return SearchCalendarResponse(success=False, error=str(e))
 
 @mcp.tool(description="Search for holidays within a date range")
 def search_holidays(
