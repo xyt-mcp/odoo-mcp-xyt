@@ -421,11 +421,22 @@ def search_calendar_by_date(
     try:
         result = odoo.execute_method(model, method, *args, **kwargs)
         parsed_result = [
-            CalendarSearchResult(id=item[0], name=item[1]) for item in result
+            CalendarSearchResult(id=item.get("id"), name=item.get("display_name")) for item in result
         ]
         return SearchCalendarResponse(success=True, result=parsed_result)
     except Exception as e:
         return SearchCalendarResponse(success=False, error=str(e))
+
+def search_partner_by_name(name: str, limit: int = 10):
+    models = endpoint_object()
+    uid = get_uid()
+    # Search and read
+    search_and_read = models.execute_kw(db, uid, password,
+                                        'res.partner', 'search_read',
+                                        [["&",["is_company","=",True],
+                                          ["name","ilike", name],]],
+                                        {'fields': ['name', 'email','mobile','opportunity_count' ,'meeting_count','comment'], 'limit': limit})
+    return search_and_read
 
 @mcp.tool(description="Search for holidays within a date range")
 def search_holidays(
@@ -488,3 +499,147 @@ def search_holidays(
 
     except Exception as e:
         return SearchHolidaysResponse(success=False, error=str(e))
+
+class PartnerSearchResult(BaseModel):
+    """Represents a single partner search result."""
+    id: int = Field(description="Partner ID")
+    name: str = Field(description="Partner name")
+    comment: Optional[str] = Field(default=None, description="Comment")
+
+class SearchPartnerResponse(BaseModel):
+    """Response model for the search_partner tool."""
+    success: bool = Field(description="Indicates if the search was successful")
+    result: Optional[List[PartnerSearchResult]] = Field(
+        default=None, description="List of partner search results"
+    )
+    error: Optional[str] = Field(default=None, description="Error message, if any")
+
+@mcp.tool(name="查询公司伙伴", description="搜索公司类型的伙伴（is_company=True）")
+def search_partner(
+    ctx: Context,
+    limit: int = 5,
+) -> SearchPartnerResponse:
+    """
+    Search for company partners (is_company=True).
+
+    Parameters:
+        limit: The maximum number of results to return (default 5).
+
+    Returns:
+        SearchPartnerResponse containing results or error information.
+    """
+    odoo = ctx.request_context.lifespan_context.odoo
+    model = "res.partner"
+    method = "search_read"
+    args = [[["is_company", "=", True]]]
+    kwargs = {"fields": ["name", "comment"], "limit": limit}
+
+    try:
+        result = odoo.execute_method(model, method, *args, **kwargs)
+        parsed_result = [
+            PartnerSearchResult(
+                id=item.get("id"),
+                name=item.get("name"),
+                comment=item.get("comment"),
+            )
+            for item in result
+        ]
+        return SearchPartnerResponse(success=True, result=parsed_result)
+    except Exception as e:
+        return SearchPartnerResponse(success=False, error=str(e))
+
+class CreateCalendarResponse(BaseModel):
+    """Response model for the create_calendar tool."""
+    success: bool = Field(description="Indicates if the creation was successful")
+    id: Optional[int] = Field(default=None, description="Created calendar event ID")
+    error: Optional[str] = Field(default=None, description="Error message, if any")
+
+@mcp.tool(name="创建日历", description="创建一个新的日历事件")
+def create_calendar(
+    ctx: Context,
+    date: str = Field(description="事件日期，格式为 YYYY-MM-DD"),
+    name: str = Field(description="事件名称"),
+) -> CreateCalendarResponse:
+    """
+    Create a new calendar event.
+
+    Parameters:
+        date: 事件日期，格式为 YYYY-MM-DD
+        name: 事件名称
+
+    Returns:
+        CreateCalendarResponse containing the new event ID or error information.
+    """
+    odoo = ctx.request_context.lifespan_context.odoo
+
+    # 校验日期格式
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return CreateCalendarResponse(success=False, error="日期格式错误，应为 YYYY-MM-DD")
+
+    model = "calendar.event"
+    method = "create"
+    args = [{
+        "name": name,
+        "display_name": name,
+        "start": date,
+        "stop": date,
+        "allday": True
+    }]
+    try:
+        event_id = odoo.execute_method(model, method, args)
+        return CreateCalendarResponse(success=True, id=event_id)
+    except Exception as e:
+        return CreateCalendarResponse(success=False, error=str(e))
+
+class SearchPartnerByNameResponse(BaseModel):
+    """Response model for the search_partner_by_name tool."""
+    success: bool = Field(description="Indicates if the search was successful")
+    result: Optional[List[PartnerSearchResult]] = Field(
+        default=None, description="List of partner search results"
+    )
+    error: Optional[str] = Field(default=None, description="Error message, if any")
+
+@mcp.tool(name="按名称查询公司伙伴", description="根据名称模糊搜索公司类型的伙伴（is_company=True）")
+def search_partner_by_name(
+    ctx: Context,
+    name: str = Field(description="要搜索的伙伴名称或部分名称"),
+    limit: int = 10,
+) -> SearchPartnerByNameResponse:
+    """
+    Search for company partners by name (is_company=True, name ilike).
+
+    Parameters:
+        name: 伙伴名称或部分名称
+        limit: 返回的最大结果数（默认10）
+
+    Returns:
+        SearchPartnerByNameResponse containing results or error information.
+    """
+    odoo = ctx.request_context.lifespan_context.odoo
+    model = "res.partner"
+    method = "search_read"
+    args = [[
+        "&",
+        ["is_company", "=", True],
+        ["name", "ilike", name]
+    ]]
+    kwargs = {
+        "fields": ["name", "comment"],
+        "limit": limit
+    }
+
+    try:
+        result = odoo.execute_method(model, method, *args, **kwargs)
+        parsed_result = [
+            PartnerSearchResult(
+                id=item.get("id"),
+                name=item.get("name"),
+                comment=item.get("comment"),
+            )
+            for item in result
+        ]
+        return SearchPartnerByNameResponse(success=True, result=parsed_result)
+    except Exception as e:
+        return SearchPartnerByNameResponse(success=False, error=str(e))
