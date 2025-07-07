@@ -34,6 +34,12 @@ logs/
 # Odoo specific
 odoo_config.json
 
+# MCP Inspector config (contains local paths)
+inspector_config.json
+
+# Test files
+test_*.py
+
 # System files
 .DS_Store
 Thumbs.db
