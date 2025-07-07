@@ -413,21 +413,19 @@ def search_employee(
     except Exception as e:
         return SearchEmployeeResponse(success=False, error=str(e))
 
-@mcp.tool(name="查询日历", description="根据日期范围查询员工日历，返回详细时间信息")
+@mcp.tool(name="查询日历", description="根据日期范围查询当前用户的日历，返回详细时间信息")
 def search_calendar_by_date_range(
     ctx: Context,
     start_date: str = Field(description="开始日期，格式为 YYYY-MM-DD"),
     end_date: Optional[str] = Field(default=None, description="结束日期，格式为 YYYY-MM-DD（可选，默认为开始日期）"),
-    employee_id: Optional[int] = Field(default=None, description="员工ID（可选，不指定则查询所有员工）"),
     limit: int = Field(default=50, description="返回的最大结果数（默认50）"),
 ) -> SearchCalendarResponse:
     """
-    Search for calendar events within a date range with detailed time information.
+    Search for current user's calendar events within a date range with detailed time information.
 
     Parameters:
         start_date: 开始日期，格式为 YYYY-MM-DD
         end_date: 结束日期，格式为 YYYY-MM-DD（可选）
-        employee_id: 员工ID（可选，用于查询特定员工的日历）
         limit: 返回的最大结果数
 
     Returns:
@@ -449,45 +447,25 @@ def search_calendar_by_date_range(
     except ValueError:
         return SearchCalendarResponse(success=False, error="日期格式错误，应为 YYYY-MM-DD")
 
-    # 构建查询条件
+    # 获取当前用户的partner_id
+    current_partner_id = None
+    try:
+        current_user = odoo.execute_method("res.users", "read", [odoo.uid], ["partner_id"])
+        if current_user and current_user[0].get("partner_id"):
+            current_partner_id = current_user[0]["partner_id"]
+            if isinstance(current_partner_id, list):
+                current_partner_id = current_partner_id[0]
+    except Exception:
+        return SearchCalendarResponse(success=False, error="获取当前用户信息失败")
+
+    # 构建查询条件 - 只查询当前用户参与的日历事件
     domain = [
         "&",
+        "&",
         ["start", ">=", f"{start_date} 00:00:00"],
-        ["start", "<=", f"{end_date} 23:59:59"]
+        ["start", "<=", f"{end_date} 23:59:59"],
+        ["partner_ids", "in", [current_partner_id]]
     ]
-
-    # 如果指定了员工ID，添加员工过滤条件
-    if employee_id:
-        try:
-            # 获取员工的partner_id
-            employee_result = odoo.execute_method(
-                "hr.employee",
-                "read",
-                [employee_id],
-                ["user_id"]
-            )
-            if employee_result and employee_result[0].get("user_id"):
-                user_id = employee_result[0]["user_id"]
-                if isinstance(user_id, list):
-                    user_id = user_id[0]
-
-                # 获取用户的partner_id
-                user_result = odoo.execute_method(
-                    "res.users",
-                    "read",
-                    [user_id],
-                    ["partner_id"]
-                )
-                if user_result and user_result[0].get("partner_id"):
-                    partner_id = user_result[0]["partner_id"]
-                    if isinstance(partner_id, list):
-                        partner_id = partner_id[0]
-
-                    # 添加参与者过滤条件
-                    domain.append(["partner_ids", "in", [partner_id]])
-        except Exception:
-            # 如果获取员工信息失败，忽略员工过滤
-            pass
 
     args = [domain]
     kwargs = {
