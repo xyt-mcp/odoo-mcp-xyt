@@ -191,6 +191,13 @@ class CalendarSearchResult(BaseModel):
 
     id: int = Field(description="Calendar ID")
     name: str = Field(description="Calendar name")
+    start: Optional[str] = Field(default=None, description="开始时间 (YYYY-MM-DD HH:MM:SS)")
+    stop: Optional[str] = Field(default=None, description="结束时间 (YYYY-MM-DD HH:MM:SS)")
+    allday: Optional[bool] = Field(default=None, description="是否全天事件")
+    location: Optional[str] = Field(default=None, description="地点")
+    description: Optional[str] = Field(default=None, description="描述")
+    partner_ids: Optional[List[str]] = Field(default=None, description="参与者")
+    opportunity_id: Optional[int] = Field(default=None, description="关联的商机ID")
 
 class SearchEmployeeResponse(BaseModel):
     """Response model for the search_employee tool."""
@@ -406,34 +413,133 @@ def search_employee(
     except Exception as e:
         return SearchEmployeeResponse(success=False, error=str(e))
 
-@mcp.tool(name="查询日历", description="根据日期查询员工日历")
-def search_calendar_by_date(
+@mcp.tool(name="查询日历", description="根据日期范围查询员工日历，返回详细时间信息")
+def search_calendar_by_date_range(
     ctx: Context,
     start_date: str = Field(description="开始日期，格式为 YYYY-MM-DD"),
-    limit: int = 10,
+    end_date: Optional[str] = Field(default=None, description="结束日期，格式为 YYYY-MM-DD（可选，默认为开始日期）"),
+    employee_id: Optional[int] = Field(default=None, description="员工ID（可选，不指定则查询所有员工）"),
+    limit: int = Field(default=50, description="返回的最大结果数（默认50）"),
 ) -> SearchCalendarResponse:
     """
-    Search for calendar by date using Odoo's search_read method.
+    Search for calendar events within a date range with detailed time information.
 
     Parameters:
-        date: 开始日期，格式为 YYYY-MM-DD
-        limit: The maximum number of results to return (default 10).
+        start_date: 开始日期，格式为 YYYY-MM-DD
+        end_date: 结束日期，格式为 YYYY-MM-DD（可选）
+        employee_id: 员工ID（可选，用于查询特定员工的日历）
+        limit: 返回的最大结果数
 
     Returns:
-        SearchCalendarResponse containing results or error information.
+        SearchCalendarResponse containing detailed calendar events with time information.
     """
     odoo = ctx.request_context.lifespan_context.odoo
     model = "calendar.event"
     method = "search_read"
 
-    args = [[["start_date", "=", start_date],]]
-    kwargs = {'fields': ['display_name', 'start_date'], 'limit': limit}
+    # 如果没有指定结束日期，使用开始日期
+    if not end_date:
+        end_date = start_date
+
+    # 验证日期格式
+    try:
+        from datetime import datetime
+        datetime.strptime(start_date, "%Y-%m-%d")
+        datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError:
+        return SearchCalendarResponse(success=False, error="日期格式错误，应为 YYYY-MM-DD")
+
+    # 构建查询条件
+    domain = [
+        "&",
+        ["start", ">=", f"{start_date} 00:00:00"],
+        ["start", "<=", f"{end_date} 23:59:59"]
+    ]
+
+    # 如果指定了员工ID，添加员工过滤条件
+    if employee_id:
+        try:
+            # 获取员工的partner_id
+            employee_result = odoo.execute_method(
+                "hr.employee",
+                "read",
+                [employee_id],
+                ["user_id"]
+            )
+            if employee_result and employee_result[0].get("user_id"):
+                user_id = employee_result[0]["user_id"]
+                if isinstance(user_id, list):
+                    user_id = user_id[0]
+
+                # 获取用户的partner_id
+                user_result = odoo.execute_method(
+                    "res.users",
+                    "read",
+                    [user_id],
+                    ["partner_id"]
+                )
+                if user_result and user_result[0].get("partner_id"):
+                    partner_id = user_result[0]["partner_id"]
+                    if isinstance(partner_id, list):
+                        partner_id = partner_id[0]
+
+                    # 添加参与者过滤条件
+                    domain.append(["partner_ids", "in", [partner_id]])
+        except Exception:
+            # 如果获取员工信息失败，忽略员工过滤
+            pass
+
+    args = [domain]
+    kwargs = {
+        'fields': [
+            'name', 'start', 'stop', 'allday', 'location', 'description',
+            'partner_ids', 'opportunity_id', 'res_model', 'res_id'
+        ],
+        'limit': limit,
+        'order': 'start ASC'  # 按开始时间排序
+    }
 
     try:
-        result = odoo.execute_method(model, method, *args, **kwargs)
-        parsed_result = [
-            CalendarSearchResult(id=item.get("id"), name=item.get("display_name")) for item in result
-        ]
+        result = odoo.execute_method(model, method, args, **kwargs)
+
+        parsed_result = []
+        for item in result:
+            # 获取参与者名称
+            partner_names = []
+            if item.get("partner_ids"):
+                try:
+                    partner_result = odoo.execute_method(
+                        "res.partner",
+                        "read",
+                        item["partner_ids"],
+                        ["name"]
+                    )
+                    partner_names = [p["name"] for p in partner_result if p.get("name")]
+                except Exception:
+                    partner_names = []
+
+            # 处理商机ID
+            opportunity_id = None
+            if item.get("opportunity_id"):
+                if isinstance(item["opportunity_id"], list):
+                    opportunity_id = item["opportunity_id"][0]
+                else:
+                    opportunity_id = item["opportunity_id"]
+
+            parsed_result.append(
+                CalendarSearchResult(
+                    id=item.get("id"),
+                    name=item.get("name") or item.get("display_name", ""),
+                    start=item.get("start"),
+                    stop=item.get("stop"),
+                    allday=item.get("allday", False),
+                    location=safe_get_string_field(item, "location"),
+                    description=safe_get_string_field(item, "description"),
+                    partner_ids=partner_names if partner_names else None,
+                    opportunity_id=opportunity_id
+                )
+            )
+
         return SearchCalendarResponse(success=True, result=parsed_result)
     except Exception as e:
         return SearchCalendarResponse(success=False, error=str(e))
