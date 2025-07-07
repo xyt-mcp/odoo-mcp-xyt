@@ -363,7 +363,7 @@ mcp dev src/odoo_mcp/server.py --with-editable .
   "mcpServers": {
     "odoo-mcp-xyt": {
       "command": "uvx",
-      "args": ["odoo-mcp-xyt==0.1.2"],
+      "args": ["odoo-mcp-xyt==2.0.0.0"],
       "env": {
         "ODOO_URL": "",
         "ODOO_DB": "",
