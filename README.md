@@ -6,7 +6,7 @@
         "odoo-mcp-xyt": {
             "command": "uvx",
             "args": [
-                "odoo-mcp-xyt==2.0.0.0"
+                "odoo-mcp-xyt==2.1.0.0"
             ],
             "env": {
                 "ODOO_URL": "",
