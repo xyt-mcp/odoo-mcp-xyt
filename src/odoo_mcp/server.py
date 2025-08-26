@@ -12,6 +12,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
+import pytz
 
 from .odoo_client import OdooClient, get_odoo_client
 
@@ -460,14 +461,11 @@ def search_calendar_by_date_range(
 
     # 构建查询条件 - 只查询当前用户参与的日历事件
     domain = [
-        "&",
-        "&",
         ["start", ">=", f"{start_date} 00:00:00"],
         ["start", "<=", f"{end_date} 23:59:59"],
         ["partner_ids", "in", [current_partner_id]]
     ]
 
-    args = [domain]
     kwargs = {
         'fields': [
             'name', 'start', 'stop', 'allday', 'location', 'description',
@@ -478,7 +476,8 @@ def search_calendar_by_date_range(
     }
 
     try:
-        result = odoo.execute_method(model, method, args, **kwargs)
+        # 修复参数传递方式，直接传递domain和kwargs
+        result = odoo.execute_method(model, method, domain, **kwargs)
 
         parsed_result = []
         for item in result:
@@ -1207,3 +1206,9 @@ def create_lead(
         return CreateLeadResponse(success=True, id=lead_id)
     except Exception as e:
         return CreateLeadResponse(success=False, error=str(e))
+@mcp.tool(name="get-current-date", description="获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 \"yyyy-MM-dd HH:mm:ss\",为其他需要日期的接口提供准确的日期输入。")
+def get_current_date() -> str:
+    """
+    获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 "yyyy-MM-dd HH:mm:ss"
+    """
+    return datetime.now(tz=pytz.timezone("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
