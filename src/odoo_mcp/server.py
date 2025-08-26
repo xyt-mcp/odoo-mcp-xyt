@@ -12,7 +12,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
-import pytz
+from zoneinfo import ZoneInfo
 
 from .odoo_client import OdooClient, get_odoo_client
 
@@ -1211,4 +1211,4 @@ def get_current_date() -> str:
     """
     获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 "yyyy-MM-dd HH:mm:ss"
     """
-    return datetime.now(tz=pytz.timezone("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(tz=ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
