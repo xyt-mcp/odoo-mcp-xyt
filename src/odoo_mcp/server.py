@@ -798,14 +798,15 @@ def create_calendar(
         activity_data["user_id"] = user_id
     else:
         activity_data["user_id"] = odoo.uid
-
+    activity_id = None    
+    if res_model_id:
     # 创建活动
-    try:
-        activity_id = odoo.execute_method(activity_model, activity_method, [activity_data])
-        if isinstance(activity_id, list) and len(activity_id) > 0:
-            activity_id = activity_id[0]
-    except Exception as e:
-        return CreateCalendarResponse(success=False, error=f"创建活动失败: {str(e)}")
+        try:
+            activity_id = odoo.execute_method(activity_model, activity_method, [activity_data])
+            if isinstance(activity_id, list) and len(activity_id) > 0:
+                activity_id = activity_id[0]
+        except Exception as e:
+            return CreateCalendarResponse(success=False, error=f"创建活动失败: {str(e)}")
 
     # 创建对应的日历事件（确保在日历中显示）
     calendar_event_id = None
@@ -910,7 +911,7 @@ def create_calendar(
 
     # 返回活动ID（主要的创建结果）
     # 注意：这里返回的是活动ID，但同时也创建了日历事件用于在日历中显示
-    return CreateCalendarResponse(success=True, id=activity_id)
+    return CreateCalendarResponse(success=True, id= activity_id if activity_id else calendar_event_id)
 
 class SearchPartnerByNameResponse(BaseModel):
     """Response model for the search_partner_by_name tool."""
