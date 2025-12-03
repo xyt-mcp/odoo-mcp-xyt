@@ -692,18 +692,29 @@ def create_calendar(
     if start_time or end_time:
         is_allday = False
         try:
+            # 🔧 使用用户设置的时区
+            user_tz = get_user_timezone(odoo)
+            
             if start_time:
                 start_hour, start_minute = map(int, start_time.split(':'))
-                start_datetime = event_date.replace(hour=start_hour, minute=start_minute)
+                start_datetime = event_date.replace(
+                    hour=start_hour, 
+                    minute=start_minute,
+                    tzinfo=user_tz
+                )
             else:
-                start_datetime = event_date.replace(hour=9, minute=0)  # 默认9:00开始
+                start_datetime = event_date.replace(hour=9, minute=0, tzinfo=user_tz)
 
             if end_time:
                 end_hour, end_minute = map(int, end_time.split(':'))
-                end_datetime = event_date.replace(hour=end_hour, minute=end_minute)
+                end_datetime = event_date.replace(
+                    hour=end_hour, 
+                    minute=end_minute,
+                    tzinfo=user_tz
+                )
             else:
                 # 如果只有开始时间，默认持续1小时
-                end_datetime = start_datetime.replace(hour=start_datetime.hour + 1)
+                end_datetime = start_datetime + timedelta(hours=1)
 
         except (ValueError, TypeError):
             return CreateCalendarResponse(success=False, error="时间格式错误，应为 HH:MM（如 09:30）")
@@ -822,8 +833,9 @@ def create_calendar(
         event_data["start"] = date
         event_data["stop"] = date
     else:
-        event_data["start"] = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        event_data["stop"] = end_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        # 使用 ISO 格式传递时间（包含时区信息）
+        event_data["start"] = start_datetime.isoformat()
+        event_data["stop"] = end_datetime.isoformat()
 
     # 获取当前用户信息并添加为参与者
     participant_ids = []
@@ -1207,9 +1219,34 @@ def create_lead(
         return CreateLeadResponse(success=True, id=lead_id)
     except Exception as e:
         return CreateLeadResponse(success=False, error=str(e))
-@mcp.tool(name="get-current-date", description="获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 \"yyyy-MM-dd HH:mm:ss\",为其他需要日期的接口提供准确的日期输入。")
-def get_current_date() -> str:
+@mcp.tool(name="get-current-date", description="获取当前日期，以用户设置的时区为准，返回格式为 \"yyyy-MM-dd HH:mm:ss\"，为其他需要日期的接口提供准确的日期输入。")
+def get_current_date(ctx: Context) -> str:
     """
-    获取当前日期，以上海时区（Asia/Shanghai, UTC+8）为准，返回格式为 "yyyy-MM-dd HH:mm:ss"
+    获取当前日期，以用户在 Odoo 中设置的时区为准，返回格式为 "yyyy-MM-dd HH:mm:ss"
     """
-    return datetime.now(tz=ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+    odoo = ctx.request_context.lifespan_context.odoo
+    user_tz = get_user_timezone(odoo)
+    return datetime.now(tz=user_tz).strftime("%Y-%m-%d %H:%M:%S")
+
+def get_user_timezone(odoo_client: OdooClient) -> ZoneInfo:
+    """
+    获取当前用户在 Odoo 中设置的时区，如果未设置则使用 UTC
+    
+    Parameters:
+        odoo_client: Odoo 客户端实例
+        
+    Returns:
+        ZoneInfo: 用户时区对象
+    """
+    try:
+        user = odoo_client.execute_method("res.users", "read", [odoo_client.uid], ["tz"])
+        user_tz = user[0].get("tz") if user else None
+        
+        if user_tz:
+            return ZoneInfo(user_tz)
+        else:
+            # 如果用户没有设置时区，默认使用 UTC
+            return ZoneInfo("UTC")
+    except Exception:
+        # 如果获取失败，返回 UTC 作为安全默认值
+        return ZoneInfo("UTC")
