@@ -56,7 +56,7 @@ def main() -> int:
     logger = setup_logging()
     
     try:
-        logger.info("=== ODOO MCP SERVER STARTING ===")
+        logger.info("=== ODOO MCP SERVER STARTING XYT ===")
         logger.info(f"Python version: {sys.version}")
         logger.info("Environment variables:")
         for key, value in os.environ.items():

@@ -7,7 +7,7 @@ Provides MCP tools and resources for interacting with Odoo ERP systems
 import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -697,21 +697,22 @@ def create_calendar(
             
             if start_time:
                 start_hour, start_minute = map(int, start_time.split(':'))
-                start_datetime = event_date.replace(
-                    hour=start_hour, 
-                    minute=start_minute,
-                    tzinfo=user_tz
-                )
+                
+                start_datetime =  event_date.replace(
+                      hour=start_hour, 
+                      minute=start_minute,
+                      tzinfo=user_tz
+                  )
             else:
                 start_datetime = event_date.replace(hour=9, minute=0, tzinfo=user_tz)
 
             if end_time:
                 end_hour, end_minute = map(int, end_time.split(':'))
                 end_datetime = event_date.replace(
-                    hour=end_hour, 
-                    minute=end_minute,
-                    tzinfo=user_tz
-                )
+                      hour=end_hour, 
+                      minute=end_minute,
+                      tzinfo=user_tz
+                  )
             else:
                 # 如果只有开始时间，默认持续1小时
                 end_datetime = start_datetime + timedelta(hours=1)
@@ -833,9 +834,8 @@ def create_calendar(
         event_data["start"] = date
         event_data["stop"] = date
     else:
-        # 使用 ISO 格式传递时间（包含时区信息）
-        event_data["start"] = start_datetime.isoformat()
-        event_data["stop"] = end_datetime.isoformat()
+        event_data["start"] = start_datetime.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        event_data["stop"] = end_datetime.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     # 获取当前用户信息并添加为参与者
     participant_ids = []
@@ -1250,3 +1250,4 @@ def get_user_timezone(odoo_client: OdooClient) -> ZoneInfo:
     except Exception:
         # 如果获取失败，返回 UTC 作为安全默认值
         return ZoneInfo("UTC")
+
